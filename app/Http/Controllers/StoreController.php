@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Store;
+use App\Models\Category;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -72,10 +74,16 @@ class StoreController extends Controller
     public function dashboard()
     {
         $store = Auth::guard('store')->user();
-        $categories = $store->categories()->withCount('products')->get();
-        $products = $store->products()->with('category')->latest()->take(5)->get();
 
-        return view('store.dashboard', compact('store', 'categories', 'products'));
+        // Set tenant context to query from tenant database
+        $store->makeCurrent();
+
+        $categories = Category::withCount('products')->get();
+        $products = Product::with('category')->latest()->take(5)->get();
+        $totalProducts = Product::count();
+        $activeProducts = Product::where('is_active', true)->count();
+
+        return view('store.dashboard', compact('store', 'categories', 'products', 'totalProducts', 'activeProducts'));
     }
 
     public function profile()
