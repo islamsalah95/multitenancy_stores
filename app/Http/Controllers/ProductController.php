@@ -12,20 +12,46 @@ class ProductController extends Controller
     public function index()
     {
         $store = Auth::guard('store')->user();
-        $products = $store->products()->with('category')->latest()->paginate(10);
+
+        // Set tenant context
+        $store->makeCurrent();
+
+        $products = Product::with('category')->latest()->paginate(10);
         return view('store.products.index', compact('products'));
     }
 
     public function create()
     {
         $store = Auth::guard('store')->user();
-        $categories = $store->categories()->where('is_active', true)->get();
+
+        // Set tenant context
+        $store->makeCurrent();
+
+        $categories = Category::where('is_active', true)->get();
         return view('store.products.create', compact('categories'));
+    }
+
+    public function show(Product $product)
+    {
+        $store = Auth::guard('store')->user();
+
+        // Set tenant context
+        $store->makeCurrent();
+
+        // Check if product belongs to the current store
+        if ($product->store_id !== $store->id) {
+            abort(403, 'Unauthorized');
+        }
+
+        return view('store.products.show', compact('product'));
     }
 
     public function store(Request $request)
     {
         $store = Auth::guard('store')->user();
+
+        // Set tenant context
+        $store->makeCurrent();
 
         $validated = $request->validate([
             'category_id' => 'required',
@@ -42,7 +68,9 @@ class ProductController extends Controller
             $validated['image'] = $imagePath;
         }
 
-        $store->products()->create($validated);
+        // Add store_id and create in tenant database
+        $validated['store_id'] = $store->id;
+        Product::create($validated);
 
         return redirect()->route('store.products.index')
             ->with('success', 'Product created successfully');
@@ -52,12 +80,15 @@ class ProductController extends Controller
     {
         $store = Auth::guard('store')->user();
 
+        // Set tenant context
+        $store->makeCurrent();
+
         // Check if product belongs to the current store
         if ($product->store_id !== $store->id) {
             abort(403, 'Unauthorized');
         }
 
-        $categories = $store->categories()->where('is_active', true)->get();
+        $categories = Category::where('is_active', true)->get();
         return view('store.products.edit', compact('product', 'categories'));
     }
 
@@ -65,13 +96,16 @@ class ProductController extends Controller
     {
         $store = Auth::guard('store')->user();
 
+        // Set tenant context
+        $store->makeCurrent();
+
         // Check if product belongs to the current store
         if ($product->store_id !== $store->id) {
             abort(403, 'Unauthorized');
         }
 
         $validated = $request->validate([
-            'category_id' => 'required|exists:categories,id,store_id,' . $store->id,
+            'category_id' => 'required',
             'name' => 'required|string|max:255',
             'description' => 'required|string',
             'price' => 'required|numeric|min:0',
@@ -94,6 +128,9 @@ class ProductController extends Controller
     public function destroy(Product $product)
     {
         $store = Auth::guard('store')->user();
+
+        // Set tenant context
+        $store->makeCurrent();
 
         // Check if product belongs to the current store
         if ($product->store_id !== $store->id) {

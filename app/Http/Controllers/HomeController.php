@@ -68,13 +68,12 @@ class HomeController extends Controller
             abort(404, 'Store not found');
         }
 
-        $categories = Category::where('store_id', $store->id)
-            ->where('is_active', true)
+        // In tenant database, all data belongs to this store, so no need to filter by store_id
+        $categories = Category::where('is_active', true)
             ->withCount('products')
             ->get();
 
-        $products = Product::where('store_id', $store->id)
-            ->where('is_active', true)
+        $products = Product::where('is_active', true)
             ->with('category')
             ->latest()
             ->paginate(12);
@@ -89,12 +88,12 @@ class HomeController extends Controller
     {
         $store = app(\Spatie\Multitenancy\Contracts\IsTenant::class);
 
-        if (!$store || $category->store_id !== $store->id) {
-            abort(404, 'Category not found');
+        if (!$store) {
+            abort(404, 'Store not found');
         }
 
+        // In tenant database, all data belongs to this store
         $products = Product::where('category_id', $category->id)
-            ->where('store_id', $store->id)
             ->where('is_active', true)
             ->latest()
             ->paginate(12);
@@ -109,12 +108,12 @@ class HomeController extends Controller
     {
         $store = app(\Spatie\Multitenancy\Contracts\IsTenant::class);
 
-        if (!$store || $product->store_id !== $store->id) {
-            abort(404, 'Product not found');
+        if (!$store) {
+            abort(404, 'Store not found');
         }
 
+        // In tenant database, all data belongs to this store
         $relatedProducts = Product::where('category_id', $product->category_id)
-            ->where('store_id', $store->id)
             ->where('id', '!=', $product->id)
             ->where('is_active', true)
             ->take(4)
