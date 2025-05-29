@@ -12,8 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('stores', function (Blueprint $table) {
-            $table->string('domain')->nullable()->after('email');
-            $table->string('database')->nullable()->after('domain');
+            //
         });
     }
 
@@ -23,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('stores', function (Blueprint $table) {
-            $table->dropColumn(['domain', 'database']);
+            //
         });
     }
 };
